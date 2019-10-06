@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+
+from time import sleep
+from requests import get
+from bs4 import BeautifulSoup as bs
+
+print('''
+...............................................
+.#####.#...#.#.....#####.####......####..#.....
+.#.....#...#.#.....#.....#...#.....#...#.#.....
+.###...#...#.#.....###...####..###.#...#.#.....
+.#.....#...#.#.....#.....#...#.....#...#.#.....
+.#####.#####.#####.#####.#...#.....####..#####.
+...............................................
+''')
+
+gettagtext = lambda tag, cl: site.find_all(tag, class_ = cl)[0].get_text()
+file = open('project_euler_problems.txt', 'w')
+problems = 671
+cancel = False
+
+#
+# class to break the two loops
+# in a function
+#
+
+class DontTryAgain(Exception):
+    def __init__(self, user_opt):
+        self.option = user_opt
+
+def getchoice():
+    user_choice = input('''press...
+1 to try again...
+2 to download the next problem...
+anything else to quit the program...
+--> ''').strip()
+
+    if user_choice != '1':
+        raise DontTryAgain(user_choice)
+
+for c in range(1, problems + 1):
+    print(f'downloading: {c}\r', end = '')
+
+    while True:
+        try:
+            site = get(f'https://projecteuler.net/problem={c}')
+            if site.status_code != 200:
+                print(f'the site\'s status code is {site.status_code}')
+
+                try:
+                    getchoice()
+                    continue
+                except DontTryAgain as e:
+                    cancel = False if e.option == '2' else True
+                    break
+
+            site = bs(site.content, 'html.parser')
+        except Exception as e:
+            print(f'\nexception: {e}')
+
+            try:
+                getchoice()
+                continue
+            except DontTryAgain as e:
+                cancel = False if e.option == '2' else True
+                break
+
+        file.write('%s\n%s\n' % (gettagtext('h2', None), gettagtext('div', 'problem_content')))
+        if c != problems:
+            file.write('=' * 20 + '\n')
+
+        break
+
+    if cancel:
+        break
+
+#
+# delay for the server don't receive
+# many requests
+#
+    sleep(1)
+
+file.close()
